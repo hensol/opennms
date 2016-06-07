@@ -44,6 +44,8 @@ import org.apache.http.client.fluent.Form;
 import org.apache.http.client.fluent.Request;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.LaxRedirectStrategy;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.opennms.core.criteria.Criteria;
@@ -52,10 +54,13 @@ import org.opennms.netmgt.dao.api.EventDao;
 import org.opennms.netmgt.dao.hibernate.EventDaoHibernate;
 import org.opennms.netmgt.events.api.EventConstants;
 import org.opennms.netmgt.model.OnmsEvent;
+import org.opennms.smoketest.NullTestEnvironment;
+import org.opennms.smoketest.OpenNMSSeleniumTestCase;
 import org.opennms.smoketest.utils.DaoUtils;
 import org.opennms.smoketest.utils.HibernateDaoFactory;
 import org.opennms.test.system.api.NewTestEnvironment.ContainerAlias;
 import org.opennms.test.system.api.TestEnvironment;
+import org.opennms.test.system.api.TestEnvironmentBuilder;
 
 /**
  * Verifies that we can issue scans on the Minion and generate newSuspect events.
@@ -63,9 +68,27 @@ import org.opennms.test.system.api.TestEnvironment;
  * @author jwhite
  */
 public class DiscoveryTest {
+    private static TestEnvironment minionSystem;
 
     @ClassRule
-    public static TestEnvironment minionSystem = TestEnvironment.builder().all().build();
+    public static final TestEnvironment getTestEnvironment() {
+        if (!OpenNMSSeleniumTestCase.isDockerEnabled()) {
+            return new NullTestEnvironment();
+        }
+        try {
+            final TestEnvironmentBuilder builder = TestEnvironment.builder().all();
+            OpenNMSSeleniumTestCase.configureTestEnvironment(builder);
+            minionSystem = builder.build();
+            return minionSystem;
+        } catch (final Throwable t) {
+            throw new RuntimeException(t);
+        }
+    }
+
+    @Before
+    public void checkForDocker() {
+        Assume.assumeTrue(OpenNMSSeleniumTestCase.isDockerEnabled());
+    }
 
     @Test
     public void canDiscoverRemoteNodes() throws ClientProtocolException, IOException {

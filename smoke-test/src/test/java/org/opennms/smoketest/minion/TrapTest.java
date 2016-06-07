@@ -36,6 +36,8 @@ import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.Date;
 
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.opennms.core.criteria.Criteria;
@@ -47,11 +49,14 @@ import org.opennms.netmgt.model.OnmsEvent;
 import org.opennms.netmgt.snmp.SnmpObjId;
 import org.opennms.netmgt.snmp.SnmpTrapBuilder;
 import org.opennms.netmgt.snmp.SnmpUtils;
+import org.opennms.smoketest.NullTestEnvironment;
+import org.opennms.smoketest.OpenNMSSeleniumTestCase;
 import org.opennms.smoketest.utils.DaoUtils;
 import org.opennms.smoketest.utils.HibernateDaoFactory;
 import org.opennms.smoketest.utils.SshClient;
 import org.opennms.test.system.api.NewTestEnvironment.ContainerAlias;
 import org.opennms.test.system.api.TestEnvironment;
+import org.opennms.test.system.api.TestEnvironmentBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,11 +67,29 @@ import org.slf4j.LoggerFactory;
  * @author seth
  */
 public class TrapTest {
-
     private static final Logger LOG = LoggerFactory.getLogger(TrapTest.class);
 
+    private static TestEnvironment minionSystem;
+
     @ClassRule
-    public static TestEnvironment minionSystem = TestEnvironment.builder().all().build();
+    public static final TestEnvironment getTestEnvironment() {
+        if (!OpenNMSSeleniumTestCase.isDockerEnabled()) {
+            return new NullTestEnvironment();
+        }
+        try {
+            final TestEnvironmentBuilder builder = TestEnvironment.builder().all();
+            OpenNMSSeleniumTestCase.configureTestEnvironment(builder);
+            minionSystem = builder.build();
+            return minionSystem;
+        } catch (final Throwable t) {
+            throw new RuntimeException(t);
+        }
+    }
+
+    @Before
+    public void checkForDocker() {
+        Assume.assumeTrue(OpenNMSSeleniumTestCase.isDockerEnabled());
+    }
 
     @Test
     public void canReceiveTraps() throws Exception {
