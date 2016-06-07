@@ -128,6 +128,23 @@ public class JmxConfigurationGeneratorIT extends OpenNMSSeleniumTestCase {
             authenticateElement.findElement(By.tagName("input")).click();
         };
 
+        /*
+         * Sometimes, Vaadin just loses input, or focus.  Or both!  I suspect it's
+         * because of the way Vaadin handles events and DOM-redraws itself, but...
+         * ¯\_(ツ)_/¯
+         *
+         * To make sure it really really *really* works, there are multiple layers
+         * of belt-and-suspenders-and-glue-and-staples:
+         *
+         * 1. Click first to ensure the field is focused
+         * 2. Clear the current contents of the field
+         * 3. Send the text to the field
+         * 4. Click it *again* because sometimes this wakes up the event handler
+         * 5. Do it all in a loop that checks for validation errors, because
+         *    *sometimes* even with all that, it will fail to fill in a field...
+         *    In that case, hit escape to clear the error message and start all
+         *    over and try again.
+         */
         boolean found = false;
         do {
             setVaadinValue("port", "18980");
